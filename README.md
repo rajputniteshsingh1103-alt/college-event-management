@@ -1,5 +1,3 @@
----
-
 # 🎓 College Event Management System
 
 A full-stack web application designed to streamline the process of organizing, managing, and participating in college events. Built with **Java Spring Boot**, this system provides a robust platform for administrators, teachers, and students.
@@ -34,5 +32,3 @@ A full-stack web application designed to streamline the process of organizing, m
     mvn spring-boot:run
     ```
 4.  Access the app at `http://localhost:8080`
-
----
