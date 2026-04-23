@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student - Events</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="dashboard">
+    <div class="topbar">
+        <h2>🎓 Student Dashboard</h2>
+        <div>
+            <span id="welcomeText"></span>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <h3>Available Events</h3>
+    <div id="eventList" class="grid"></div>
+
+    <h3>My Registrations</h3>
+    <div id="myRegistrations" class="grid"></div>
+</div>
+
+<script src="script.js"></script>
+<script>
+    const role = localStorage.getItem('userRole');
+    const email = localStorage.getItem('userEmail');
+
+    if (!role || role.toLowerCase() !== 'student') {
+        window.location.href = 'login.html';
+    }
+
+    document.getElementById('welcomeText').innerText = 'Welcome, ' + email;
+
+    window.onload = function() {
+        loadEvents();
+        loadMyRegistrations();
+    };
+
+    // --- UPDATED LOGIC: Registered events ko hide karne ke liye ---
+    async function loadEvents() {
+        try {
+            // 1. Saare events fetch karein
+            const resEvents = await fetch('http://localhost:8080/events');
+            const allEvents = await resEvents.json();
+
+            // 2. Apne saare registrations fetch karein
+            const resReg = await fetch('http://localhost:8080/all');
+            const allReg = await resReg.json();
+
+            // 3. Registered events ke naam ki ek list banayein
+            const myRegisteredNames = allReg
+                .filter(r => r.userEmail === email)
+                .map(r => r.eventName);
+
+            const div = document.getElementById('eventList');
+            div.innerHTML = '';
+
+            // 4. Filter: Status 'APPROVED' ho AUR wo mere registered list mein NA ho
+            const approvedEvents = allEvents.filter(ev =>
+                ev.status === 'APPROVED' && !myRegisteredNames.includes(ev.name)
+            );
+
+            if (approvedEvents.length === 0) {
+                div.innerHTML = '<p style="color: #64748b; padding: 10px;">No new events available to register.</p>';
+            }
+
+            approvedEvents.forEach(ev => {
+                div.innerHTML += `
+                    <div class="card">
+                        <h4>${ev.name}</h4>
+                        <p>Category: ${ev.category}</p>
+                        <p>Date: ${ev.eventDate}</p>
+                        <button class="btn-primary" onclick="registerEvent('${ev.name}')">Register Now</button>
+                    </div>`;
+            });
+        } catch (e) { console.log("Error loading events:", e); }
+    }
+
+    async function registerEvent(eventName) {
+        const payload = {
+            eventName: eventName,
+            userEmail: email
+        };
+
+        try {
+            const res = await fetch('http://localhost:8080/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Success: " + eventName + " mein registration ho gaya!");
+                // Dono lists refresh karein
+                loadEvents();
+                loadMyRegistrations();
+            } else {
+                alert("Registration fail ho gaya.");
+            }
+        } catch (error) {
+            alert("Server connect nahi ho raha.");
+        }
+    }
+
+    async function loadMyRegistrations() {
+        try {
+            const res = await fetch('http://localhost:8080/all');
+            const all = await res.json();
+            const mine = all.filter(r => r.userEmail === email);
+            const div = document.getElementById('myRegistrations');
+
+            if (mine.length === 0) {
+                div.innerHTML = '<p style="color: #64748b; padding: 10px;">You haven\'t registered for any events yet.</p>';
+                return;
+            }
+
+            div.innerHTML = mine.map(r => `
+                <div class="card" style="border-left: 5px solid #10b981;">
+                    <h4>${r.eventName}</h4>
+                    <p style="color: #065f46; font-weight: 600;">Status: Registered ✓</p>
+                </div>
+            `).join('');
+        } catch (e) { console.log("Error loading registrations:", e); }
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+</script>
+</body>
+</html>

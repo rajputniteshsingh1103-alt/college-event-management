@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Event Management</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="login-page">
+<div class="login-container">
+    <h2> Event Management System</h2>
+    <p class="subtitle">Please login to continue</p>
+
+    <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter your email">
+    </div>
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password">
+    </div>
+    <div id="errorMsg" class="error-msg" style="display:none;">Invalid email or password</div>
+    <button class="btn-login" onclick="doLogin()">Login</button>
+
+    <div class="hint-box">
+        <p><b>Demo credentials:</b></p>
+        <p>Student: student@gmail.com / student123</p>
+        <p>Teacher: teacher@gmail.com / teacher123</p>
+        <p>Admin: admin@gmail.com / admin123</p>
+    </div>
+</div>
+
+<script>
+    async function doLogin() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        if (!email || !password) {
+            alert('Email aur password dono bharo!');
+            return;
+        }
+
+        const response = await fetch('/doLogin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userEmail: email, password: password })
+        });
+
+        const role = await response.text();
+
+        if (role === 'invalid') {
+            document.getElementById('errorMsg').style.display = 'block';
+            return;
+        }
+
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('userEmail', email);
+
+        if (role === 'student') window.location.href = 'index.html';
+        else if (role === 'teacher') window.location.href = 'teacher.html';
+        else if (role === 'admin') window.location.href = 'admin.html';
+    }
+</script>
+</body>
+</html>

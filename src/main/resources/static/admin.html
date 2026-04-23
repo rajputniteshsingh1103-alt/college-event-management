@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - EMS</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<nav>
+    <a href="admin.html" class="logo">EMS Admin</a>
+    <div class="nav-links">
+        <button onclick="logout()" class="btn-logout">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <header style="margin-bottom: 2rem;">
+        <h1>Manage College Events</h1>
+        <p style="color: var(--text-muted);">Approve or reject event requests from teachers.</p>
+    </header>
+
+    <section>
+        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+            <span style="width:12px; height:12px; background:var(--warning); border-radius:50%;"></span>
+            Pending Approval
+        </h3>
+        <div id="pendingEvents" class="grid">
+        </div>
+    </section>
+
+    <section style="margin-top: 4rem;">
+        <h3 style="margin-bottom: 1rem;">Event History</h3>
+        <div id="allEvents" class="grid">
+        </div>
+    </section>
+</div>
+
+<script src="script.js"></script>
+<script>
+    // Security Check
+    checkAuth(['admin']);
+
+    async function loadAdminDashboard() {
+        const events = await apiFetch("/events");
+        if (!events) return;
+
+        const pendingEventsDiv = document.getElementById("pendingEvents");
+        const allEventsDiv = document.getElementById("allEvents");
+
+        // Separate Pending from others
+        const pending = events.filter(e => e.status === "PENDING");
+        const others = events.filter(e => e.status !== "PENDING");
+
+        // Render Pending
+        pendingEventsDiv.innerHTML = pending.length === 0 ? "<p>No pending requests.</p>" : "";
+        pending.forEach(ev => {
+            pendingEventsDiv.innerHTML += `
+                <div class="card">
+                    <span class="status status-pending">${ev.category}</span>
+                    <h3 class="card-title" style="margin-top:10px;">${ev.name}</h3>
+                    <p class="card-date">📅 ${ev.eventDate}</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom:15px;">By: ${ev.createdByEmail}</p>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-primary" style="flex:1" onclick="handleAction(${ev.id}, 'approve')">Approve</button>
+                        <button class="btn-logout" style="flex:1; background:var(--danger)" onclick="handleAction(${ev.id}, 'reject')">Reject</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Render Others
+        allEventsDiv.innerHTML = others.length === 0 ? "<p>No history found.</p>" : "";
+        others.forEach(ev => {
+            allEventsDiv.innerHTML += `
+                <div class="card" style="opacity: 0.8;">
+                    <span class="status status-${ev.status.toLowerCase()}">${ev.status}</span>
+                    <h3 class="card-title" style="margin-top:10px;">${ev.name}</h3>
+                    <p class="card-date">📅 ${ev.eventDate}</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Category: ${ev.category}</p>
+                </div>
+            `;
+        });
+    }
+
+    async function handleAction(id, action) {
+        const endpoint = action === 'approve' ? `/approve/${id}` : `/reject/${id}`;
+        const res = await apiFetch(endpoint, "PUT");
+        if(res) {
+            alert(`Event ${action}ed successfully!`);
+            loadAdminDashboard();
+        }
+    }
+
+    // Initial Load
+    loadAdminDashboard();
+</script>
+</body>
+</html>

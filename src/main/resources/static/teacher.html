@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - EMS</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav>
+    <a href="teacher.html" class="logo">EMS Teacher</a>
+    <div class="nav-links">
+        <a href="#" class="active">Dashboard</a>
+        <button onclick="logout()" class="btn-logout">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="grid" style="grid-template-columns: 1fr 2fr;">
+        <!-- Create Event Form -->
+        <div>
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem;">Create New Event</h3>
+                <form id="createEventForm">
+                    <div class="form-group">
+                        <label for="eventName">Event Name</label>
+                        <input type="text" id="eventName" placeholder="e.g. Science Fair" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Culture">Culture</option>
+                            <option value="Education">Education</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="eventDate">Event Date</label>
+                        <input type="date" id="eventDate" required>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Submit Event</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Events List -->
+        <div>
+            <div class="dashboard-header">
+                <h2>My Created Events</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Category</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody id="myEventsTable">
+                    <!-- Table rows injected here -->
+                    <tr><td colspan="4" style="text-align:center">Loading events...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+    const userEmail = localStorage.getItem('userEmail');
+
+    // ✅ Initial load function
+    window.onload = function() {
+        if (!userEmail) {
+            alert("Session expired! Please login again.");
+            window.location.href = 'login.html';
+        } else {
+            loadMyEvents();
+        }
+    };
+
+    async function loadMyEvents() {
+        // script.js mein agar apiFetch hai to use karein, nahi to fetch use karein
+        const response = await fetch("http://localhost:8080/events");
+        const events = await response.json();
+
+        // ❌ Yahan galti thi: tableBody ki ID sahi honi chahiye
+        const tableBody = document.getElementById("myEventsTable");
+        tableBody.innerHTML = "";
+
+        // Sirf wahi events filter karein jo login teacher ne banaye hain
+        const myEvents = events.filter(e => e.createdByEmail === userEmail);
+
+        if (myEvents.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center">No events created yet.</td></tr>`;
+            return;
+        }
+
+        myEvents.forEach(ev => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${ev.name}</td>
+                    <td>${ev.category}</td>
+                    <td>${ev.eventDate}</td>
+                    <td><span class="status status-${ev.status.toLowerCase()}">${ev.status}</span></td>
+                </tr>`;
+        });
+    }
+
+    document.getElementById('createEventForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const payload = {
+            name: document.getElementById('eventName').value,
+            category: document.getElementById('category').value,
+            eventDate: document.getElementById('eventDate').value,
+            createdByEmail: userEmail,
+            status: "PENDING"
+        };
+
+        try {
+            const response = await fetch('http://localhost:8080/createEvent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('Event successfully created and sent for approval!');
+                this.reset();
+                loadMyEvents(); // List ko turant update karne ke liye
+            } else {
+                alert('Event create karne mein error aaya.');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Backend server connect nahi ho raha!");
+        }
+    });
+</script>
+</body>
+</html>
